@@ -1,0 +1,56 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local.json
+config.local.*
+secrets.*
+!secrets.example
+!secrets.example.*
+credentials*.json
+client_secret*.json
+service-account*.json
+token*.json
+.clasp.json
+
+# Private job-search data
+private/
+data/private/
+exports/
+applications/
+contacts/
+experience-bank/
+user-profile.*
+*.resume.private.*
+resume/private/
+resume/output/
+resume/outputs/
+
+# Generated documents and temporary files
+*.pdf
+*.docx
+*.aux
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Dependencies, coverage, and build output
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Apps Script local tooling
+.claspignore.local
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
