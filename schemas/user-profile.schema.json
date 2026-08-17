@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/job-search-os/user-profile.schema.json",
+  "title": "Private User Job Search Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "location_preferences",
+    "role_family_weights",
+    "industry_interest_weights",
+    "preferred_companies",
+    "preferred_industries",
+    "avoided_companies",
+    "avoided_industries",
+    "work_authorization",
+    "salary_floor"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "profile_id": { "type": "string", "minLength": 1 },
+    "location_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "remote_allowed",
+        "remote_tier",
+        "hybrid_allowed",
+        "onsite_allowed",
+        "relocation_allowed",
+        "unknown_location_tier",
+        "multi_location_strategy",
+        "rules"
+      ],
+      "properties": {
+        "remote_allowed": { "type": "boolean" },
+        "remote_tier": { "$ref": "#/$defs/locationTier" },
+        "hybrid_allowed": { "type": "boolean" },
+        "onsite_allowed": { "type": "boolean" },
+        "relocation_allowed": { "type": "boolean" },
+        "unknown_location_tier": { "$ref": "#/$defs/locationTier" },
+        "multi_location_strategy": {
+          "enum": ["BEST_TIER", "WORST_TIER", "REQUIRE_REVIEW"]
+        },
+        "rules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/locationRule" }
+        }
+      }
+    },
+    "role_family_weights": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/weightedPreference" }
+    },
+    "industry_interest_weights": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/weightedPreference" }
+    },
+    "preferred_companies": { "$ref": "#/$defs/stringList" },
+    "preferred_industries": { "$ref": "#/$defs/stringList" },
+    "avoided_companies": { "$ref": "#/$defs/stringList" },
+    "avoided_industries": { "$ref": "#/$defs/stringList" },
+    "work_authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requires_current_sponsorship",
+        "requires_future_sponsorship",
+        "user_confirmed_facts"
+      ],
+      "properties": {
+        "requires_current_sponsorship": { "$ref": "#/$defs/yesNoUnknown" },
+        "requires_future_sponsorship": { "$ref": "#/$defs/yesNoUnknown" },
+        "user_confirmed_facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "value", "confirmed_at"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "value": { "type": ["string", "boolean", "null"] },
+              "confirmed_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "salary_floor": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "currency", "period"],
+          "properties": {
+            "amount": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+            "period": { "enum": ["YEAR", "HOUR"] }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "locationTier": {
+      "enum": ["PREFERRED", "ACCEPTABLE", "LOW_INTEREST", "HARD_NO"]
+    },
+    "yesNoUnknown": { "enum": ["YES", "NO", "UNKNOWN"] },
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "weightedPreference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "weight"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "weight": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "locationRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "scope", "tier"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "scope": { "enum": ["COUNTRY", "STATE", "METRO", "CITY"] },
+        "country": { "type": "string", "minLength": 1 },
+        "state": { "type": "string", "minLength": 1 },
+        "metro": { "type": "string", "minLength": 1 },
+        "city": { "type": "string", "minLength": 1 },
+        "tier": { "$ref": "#/$defs/locationTier" },
+        "priority": { "type": "integer", "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "const": "COUNTRY" } } },
+          "then": { "required": ["country"] }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "STATE" } } },
+          "then": { "required": ["state"] }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "METRO" } } },
+          "then": { "required": ["metro"] }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "CITY" } } },
+          "then": { "required": ["city"] }
+        }
+      ]
+    }
+  }
+}

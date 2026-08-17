@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "profile_example_001",
+  "location_preferences": {
+    "remote_allowed": true,
+    "remote_tier": "ACCEPTABLE",
+    "hybrid_allowed": true,
+    "onsite_allowed": true,
+    "relocation_allowed": true,
+    "unknown_location_tier": "LOW_INTEREST",
+    "multi_location_strategy": "BEST_TIER",
+    "rules": [
+      {
+        "id": "example_country",
+        "scope": "COUNTRY",
+        "country": "Exampleland",
+        "tier": "LOW_INTEREST"
+      },
+      {
+        "id": "example_state",
+        "scope": "STATE",
+        "country": "Exampleland",
+        "state": "Northstar",
+        "tier": "ACCEPTABLE"
+      },
+      {
+        "id": "example_metro",
+        "scope": "METRO",
+        "country": "Exampleland",
+        "state": "Northstar",
+        "metro": "Aurora Metro",
+        "tier": "PREFERRED"
+      },
+      {
+        "id": "example_city_override",
+        "scope": "CITY",
+        "country": "Exampleland",
+        "state": "Northstar",
+        "metro": "Aurora Metro",
+        "city": "Remote Hamlet",
+        "tier": "LOW_INTEREST"
+      }
+    ]
+  },
+  "role_family_weights": [
+    { "name": "Example Signal Systems", "weight": 90 },
+    { "name": "Example Test Engineering", "weight": 75 }
+  ],
+  "industry_interest_weights": [
+    { "name": "Fictional Instrumentation", "weight": 85 },
+    { "name": "Imaginary Mobility", "weight": 65 }
+  ],
+  "preferred_companies": ["Example Devices Cooperative"],
+  "preferred_industries": ["Fictional Instrumentation"],
+  "avoided_companies": ["Example Hazard Works"],
+  "avoided_industries": ["Imaginary Restricted Industry"],
+  "work_authorization": {
+    "requires_current_sponsorship": "UNKNOWN",
+    "requires_future_sponsorship": "UNKNOWN",
+    "user_confirmed_facts": []
+  },
+  "salary_floor": null
+}

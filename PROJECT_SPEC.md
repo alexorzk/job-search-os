@@ -95,20 +95,19 @@ The user applies manually and marks the application state. A later V1 enhancemen
 
 One `Stage` field is clearer than mixing discovery and document tasks:
 
-- `Review`
-- `Saved`
-- `Resume Needed`
-- `Resume Draft`
-- `Ready to Apply`
-- `Applied`
-- `Networking`
-- `Interviewing`
-- `Offer`
-- `Rejected`
-- `Closed`
-- `Skipped`
+- `REVIEW`
+- `SAVED`
+- `RESUME_NEEDED`
+- `READY_TO_APPLY`
+- `APPLIED`
+- `FOLLOW_UP`
+- `INTERVIEWING`
+- `OFFER`
+- `REJECTED`
+- `CLOSED`
+- `SKIPPED`
 
-Raw discoveries that are not promoted do not need a Notion stage. `Daily Batch`, `Rank`, and processing fields distinguish today's queue from lifecycle state. Transitions remain user-controlled except that ingestion may create `Review` items and a confirmed closed posting may be flagged for closure rather than silently changed.
+Raw discoveries that are not promoted do not need a Notion stage. `Daily Batch`, `Daily Rank`, and processing fields distinguish today's queue from lifecycle state. `READY_TO_APPLY` means required resume work is complete; `FOLLOW_UP` combines networking and follow-up without an extra branch. Transitions remain user-controlled except that automation may initialize a new page to `REVIEW`; later upserts never overwrite Stage.
 
 ## Architecture
 

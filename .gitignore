@@ -21,6 +21,7 @@ applications/
 contacts/
 experience-bank/
 user-profile.*
+!schemas/user-profile.schema.json
 *.resume.private.*
 resume/private/
 resume/output/

@@ -2,7 +2,7 @@
 
 A privacy-conscious, semi-automated operating system for finding and prioritizing early-career electrical engineering jobs, tailoring truthful resumes, and tracking applications.
 
-This public repository currently contains the **Milestone 0 planning foundation** for a one-week V1. It intentionally contains no application implementation, credentials, personal resume, private Experience Bank, or application data.
+This public repository contains the Milestone 0 planning foundation and the safe, fake-data-only Milestone 1 Notion/data foundation for a one-week V1. It intentionally contains no credentials, personal profile, resume, private Experience Bank, or application data.
 
 ## V1 outcome
 
@@ -24,6 +24,29 @@ V1 does not include LinkedIn scraping, automatic applications or messaging, a cu
 - [docs/data-model.md](docs/data-model.md) — minimal schemas and lifecycle states
 - [docs/scoring.md](docs/scoring.md) — ranking, hard filters, freshness, seniority, and visa handling
 - [docs/privacy.md](docs/privacy.md) — public-repository data policy and secret handling
+- [docs/setup-milestone-1.md](docs/setup-milestone-1.md) — private Apps Script, Notion, Sheet, profile, and verification setup
+- [docs/notion-schema.md](docs/notion-schema.md) — implemented Notion properties and ownership boundaries
+- [docs/profile-schema.md](docs/profile-schema.md) — private profile structure and location precedence
+
+## Milestone 1 foundation
+
+The public implementation under `apps-script/` provides:
+
+- Script Properties configuration and validation;
+- an idempotent bootstrap for one private staging Sheet and three private Notion databases;
+- private Sheet abstractions for candidates, runs, checkpoints, errors, and the active profile;
+- stable job IDs and idempotent Notion create/update behavior;
+- hard separation between automation-owned and user-owned Job properties;
+- structured, allowlisted logging and write-free dry runs;
+- fake fixtures and dependency-free Node tests.
+
+Run the public test suite with:
+
+```powershell
+npm test
+```
+
+Live setup requires private user action and credentials. Follow [docs/setup-milestone-1.md](docs/setup-milestone-1.md); never commit the resulting `.clasp.json`, IDs, tokens, Sheet data, or profile.
 
 ## Planned setup
 
@@ -31,4 +54,4 @@ Implementation begins only after Milestone 0 is approved. The future setup will 
 
 ## Status
 
-Milestone 0: planning foundation. Do not add real personal or credential data to this public repository. See [docs/privacy.md](docs/privacy.md) before contributing.
+Milestone 1: public foundation implemented and mock-verified; private bootstrap/live verification pending user setup. Milestone 2 has not started. See [docs/privacy.md](docs/privacy.md) before contributing.

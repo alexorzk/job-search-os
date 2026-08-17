@@ -13,6 +13,8 @@
 
 One record represents a promoted opportunity and its application lifecycle. A separate Application database is unnecessary for a one-application-per-job V1.
 
+This table describes the eventual V1 logical record. Milestone 1 creates the smaller physical subset listed in [notion-schema.md](notion-schema.md); fields such as description snapshots, extracted requirements, and score versions are added only when their milestones implement them.
+
 | Field | Type | Owner | Purpose |
 | --- | --- | --- | --- |
 | `Job ID` | text (stable, unique) | automation | Internal identity used for upserts |
@@ -20,8 +22,8 @@ One record represents a promoted opportunity and its application lifecycle. A se
 | `Company` | text | automation | Normalized employer |
 | `Canonical URL` | URL | automation | Preferred application/posting URL |
 | `Official Application URL` | URL | automation | Company career-page URL used as verification/source-of-truth when available |
-| `Source Links` | text/URLs | automation | All provenance links; compact JSON/text is acceptable in V1 |
-| `Source Types` | multi-select | automation | GitHub, Gmail, Manual |
+| `Source` | select | automation | GITHUB, GMAIL, or MANUAL |
+| `Source URL` | URL | automation | Discovery provenance URL |
 | `Location` | text | automation | Normalized display location |
 | `Work Mode` | select | automation | On-site, Hybrid, Remote, Unknown |
 | `Location Tier` | select | automation | Preferred, Acceptable, Low-Interest, Hard-No |
@@ -39,24 +41,24 @@ One record represents a promoted opportunity and its application lifecycle. A se
 | `Score` | number | automation | Final score after penalties, 0–100 |
 | `Score Version` | text | automation | Rules/weights/model traceability |
 | `Fit Summary` | rich text | automation | Concise reason for promotion; not verbose skill-by-skill UI |
-| `Review Flags` | multi-select | automation | Missing description, visa review, duplicate review, stale, etc. |
+| `Flags` | rich text | automation | Compact structured flags: missing description, visa review, duplicate review, stale, etc. |
 | `Daily Batch` | date/text | automation | Local date key for promotion |
 | `Daily Rank` | number | automation | 1–10 within batch |
 | `Location Wildcard` | checkbox | automation | True only for the one permitted exceptional Low-Interest promotion |
-| `Stage` | select | user | Review, Saved, Resume Needed, Resume Draft, Ready to Apply, Applied, Networking, Interviewing, Offer, Rejected, Closed, Skipped |
+| `Stage` | select | user | REVIEW, SAVED, RESUME_NEEDED, READY_TO_APPLY, APPLIED, FOLLOW_UP, INTERVIEWING, OFFER, REJECTED, CLOSED, SKIPPED |
 | `Interest Override` | select/number | user | Optional preference adjustment for future rescoring |
-| `User Notes` | rich text | user | Decision and follow-up notes |
-| `Applied At` | date | user | Confirmed manual submission date |
-| `Resume Versions` | relation | shared | Links exact tailored versions |
+| `Notes` | rich text | user | Decision and follow-up notes |
+| `Application Date` | date | user | Confirmed manual submission date |
+| `Follow-up Date` | date | user | User-controlled networking/follow-up reminder |
 | `Selected Resume` | relation | user | Exact version actually used |
 
-Automation must preserve `Stage`, `Interest Override`, `User Notes`, `Applied At`, and `Selected Resume` during upserts.
+Automation initializes `Stage=REVIEW` only during page creation. Every update must preserve `Stage`, `Interest Override`, `Notes`, `Application Date`, `Follow-up Date`, and `Selected Resume` by omitting them from the update payload.
 
 Job description text can exceed a convenient Notion property. V1 may store a truncated human-readable excerpt plus a private Drive text snapshot or a private staging record, while retaining a hash and link on the Job.
 
 ## User Job Search Profile (private configuration object)
 
-V1 has one user, so this does not require a Notion database. Store it as a private structured document (for example, a private Drive JSON/Sheet or Apps Script-accessible private configuration) and expose only non-sensitive fake schema examples publicly.
+V1 has one user, so this does not require a Notion database. Milestone 1 stores one structured `ACTIVE` profile JSON record in the private staging Sheet's `Profile` tab. It is not stored in Script Properties. Only the schema and fictional examples are public.
 
 | Field | Type | Purpose |
 | --- | --- | --- |
@@ -153,7 +155,15 @@ No automated sending is allowed.
 
 ## Processing records (implementation detail)
 
-Raw candidates and run logs should not become Notion dashboard databases. The minimal private processing representation needs:
+Raw candidates and run logs do not become Notion dashboard databases. Milestone 1 implements a private Google Sheet with the following tabs:
+
+- `Candidates`: normalized payload, stable Job ID, source provenance, processing state, first/last seen, Notion page ID, and sanitized item error;
+- `Runs`: run identity, timing, status, dry-run flag, counts, and sanitized run error;
+- `Checkpoints`: small source/checkpoint key-value state;
+- `Errors`: append-only sanitized component/item error records;
+- `Profile`: one `ACTIVE` private profile JSON record and schema version.
+
+The minimal private processing representation includes:
 
 - `run_id`, local batch date, start/end/status, counts, and sanitized errors;
 - source checkpoint (`adapter`, upstream item/message ID, revision, observed time);
@@ -163,12 +173,12 @@ Raw candidates and run logs should not become Notion dashboard databases. The mi
 - location tier, wildcard eligibility/reason, and visa evidence supporting the three-state result;
 - publish status and Notion page ID.
 
-Apps Script Properties/cache may suffice at tiny volume. Use a private Google Sheet only if durable checkpoints, quotas, or debugging require it.
+Apps Script Properties store secrets, generated resource IDs, safe settings, and small configuration values only. They are not a candidate/profile database.
 
 ## Lifecycle invariants
 
-- A job cannot be `Ready to Apply` without an approved related Resume Version when a resume is required.
-- A job cannot be marked `Applied` by automation.
+- A job cannot be `READY_TO_APPLY` without an approved related Resume Version when a resume is required.
+- A job cannot be marked `APPLIED` by automation.
 - `Selected Resume` must reference an approved/used immutable file.
 - A visa `NO` or Hard-No-location job cannot enter the Daily Top 10.
 - A Daily Top 10 contains at most one Low-Interest job, marked `Location Wildcard`; when at least nine viable Preferred/Acceptable jobs exist, at least nine selected jobs come from those tiers.

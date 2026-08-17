@@ -1,0 +1,12 @@
+{
+  "name": "job-search-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public, fake-data-only foundation for a private Job Search OS",
+  "scripts": {
+    "test": "node --test tests/config.test.js tests/profile.test.js tests/ids.test.js tests/foundation.test.js tests/bootstrap.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

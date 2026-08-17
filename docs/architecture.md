@@ -144,7 +144,9 @@ Hunter.io is optional and user-triggered after an application is recorded. It ma
 9. **Tailor:** on user request, assemble a traceable proposal from approved evidence.
 10. **Render:** produce and validate a deterministic file, then save the approved version to Drive.
 
-For V1, intermediate candidates may be held in Apps Script Properties/cache only for small checkpoints or recomputed from source fixtures. If volume or quotas make that unreliable, a private Google Sheet is the simplest fallback staging store. It should not become a second user-facing system of record.
+V1 uses a private Google Sheet as the durable staging/debugging store. It contains normalized candidates, processing state, source provenance, run metadata, checkpoints, sanitized errors, and the private active profile. It is not a second user-facing application database. Script Properties hold secrets, resource IDs, safe configuration, and only small settings—not candidate records.
+
+The Milestone 1 Sheet has five tabs: `Candidates`, `Runs`, `Checkpoints`, `Errors`, and `Profile`. Stable keys and header validation make writes idempotent and make schema drift fail visibly.
 
 ## Identity and deduplication
 
@@ -170,6 +172,7 @@ Fuzzy similarity may flag a possible duplicate but should not merge records auto
 
 - OAuth grants and API tokens remain in Google/Apps Script and Notion private configuration.
 - Public GitHub contains code, schemas, fake fixtures, and documentation only.
+- The staging Sheet, profile row, generated Notion resources, Script ID, and all generated resource IDs remain private.
 - Gmail reads are restricted by configured query/labels and are never written or forwarded.
 - Notion/Drive sharing is private and reviewed manually.
 - Prompt inputs are minimized; provider data-handling settings must be reviewed before real personal data is sent.
@@ -181,10 +184,10 @@ See [privacy.md](privacy.md) for the full repository policy.
 
 Minimum Notion views:
 
-- **Today — Review:** current daily batch ordered by rank;
-- **Resume Work:** Resume Needed and Resume Draft;
-- **Ready to Apply:** approved resumes awaiting manual submission;
-- **Active Applications:** Applied, Networking, and Interviewing;
-- **Archive:** Offer, Rejected, Closed, Skipped.
+- **Today — Review:** current daily batch with `Stage=REVIEW`, ordered by rank;
+- **Resume Work:** `Stage=RESUME_NEEDED`;
+- **Ready to Apply:** `Stage=READY_TO_APPLY`;
+- **Active Applications:** `APPLIED`, `FOLLOW_UP`, and `INTERVIEWING`;
+- **Archive:** `OFFER`, `REJECTED`, `CLOSED`, and `SKIPPED`.
 
 No custom frontend is needed.
