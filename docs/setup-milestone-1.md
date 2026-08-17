@@ -45,6 +45,55 @@ All fixtures use reserved example domains and fictional locations, employers, jo
 
 Do not commit the Script ID or `.clasp.json`.
 
+### Temporary owner-only `clasp run` access
+
+The manifest declares an API executable with `executionApi.access` set to `MYSELF`. This does not publish a public endpoint: only the deploying owner can execute it. `clasp run` uses development mode by default, so it executes the latest pushed source while the owner-only API deployment exists.
+
+Remote execution requires private setup that cannot be committed or inferred:
+
+1. Create or select a standard Google Cloud project owned by the same account as the Apps Script project. The Apps Script default Cloud project is not sufficient for `scripts.run`.
+2. Enable the Google Apps Script API in that Cloud project.
+3. Configure the OAuth consent screen for private/testing use. Add only the owning Google account as a test user if Google requires one.
+4. Create an OAuth client of type **Desktop app** and download its JSON to a private path outside the repository. Do not commit it.
+5. In Apps Script Project Settings, change the Google Cloud Platform project to the standard project's numeric **project number**.
+6. Add the standard Cloud project's textual **project ID** to the ignored local `.clasp.json` as `projectId`. Keep the existing private `scriptId` and `rootDir` unchanged.
+7. Authorize a separate local credential profile using only the manifest's current runtime scopes:
+
+   ```powershell
+   clasp.cmd login --user job-search-os-run --creds C:\private\client_secret.json --use-project-scopes
+   ```
+
+   Do not add `--include-clasp-scopes`: named `clasp run` calls do not need clasp's broader deployment, Drive, logging, or Cloud-management scopes. Continue using the existing/default clasp login for `push` and deployment administration.
+
+8. Push the manifest. If **Deploy > Manage deployments** does not already show the temporary owner-only API executable, create it once:
+
+   ```powershell
+   clasp.cmd push
+   clasp.cmd create-deployment --description "Temporary owner-only clasp run"
+   ```
+
+If command-line deployment does not show an API executable under **Deploy > Manage deployments**, create it once in the Apps Script UI: **Deploy > New deployment > API executable**, choose **Only myself**, and deploy. Do not create a duplicate or choose a broader access level.
+
+Run entrypoints by name, without parentheses. These commands use development mode unless `--nondev` is supplied:
+
+```powershell
+clasp.cmd --user job-search-os-run run initializeSafeDefaults
+clasp.cmd --user job-search-os-run run bootstrapPrivateFoundation
+clasp.cmd --user job-search-os-run run validatePrivateProfile
+clasp.cmd --user job-search-os-run run verifyMilestone1FakeJobInitial
+clasp.cmd --user job-search-os-run run verifyMilestone1FakeJobUpdate
+```
+
+For the non-mutating fake-job check, leave the private `DRY_RUN` Script Property set to `true` and run `verifyMilestone1FakeJobInitial`. Do not run the update verification until intentionally performing the documented live fake-data test.
+
+To remove the temporary execution path, identify only the temporary deployment in `clasp.cmd list-deployments`, then run:
+
+```powershell
+clasp.cmd delete-deployment DEPLOYMENT_ID
+```
+
+Do not use `--all`, because it could remove unrelated deployments. After deletion, `clasp run` can no longer execute this project through that deployment. The owner-only manifest declaration may remain dormant, or it can be removed and pushed if API execution is permanently retired. The local named credential can be removed with `clasp.cmd logout --user job-search-os-run` after confirming no other project uses it.
+
 ## 3. Create the private Notion connection and parent page
 
 1. In Notion, create a private page named `Job Search OS` in the intended private workspace.

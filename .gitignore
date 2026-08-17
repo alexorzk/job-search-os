@@ -12,6 +12,7 @@ client_secret*.json
 service-account*.json
 token*.json
 .clasp.json
+.clasprc.json
 
 # Private job-search data
 private/
