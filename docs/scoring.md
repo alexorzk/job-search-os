@@ -10,12 +10,12 @@ The system first applies deterministic hard filters, then calculates component s
 
 | Component | Default weight | Meaning |
 | --- | ---: | --- |
-| Technical / experience fit | 38% | Evidence-backed overlap between role needs and approved experience |
+| Technical / experience fit | 35% | Evidence-backed overlap between role needs and approved experience |
 | Visa compatibility | 20% | Explicit restrictions, positive evidence, and uncertainty |
-| New-grad / seniority fit | 17% | Degree timing, level, and experience requirement |
-| Freshness | 12% | Posting/first-seen recency |
-| Personal interest | 8% | Preferred role families/industries |
-| Location / compensation | 5% | Geographic feasibility and known compensation preference |
+| New-grad / seniority fit | 15% | Degree timing, level, and experience requirement |
+| Location | 15% | Preferred, Acceptable, Low-Interest, or Hard-No classification |
+| Freshness | 10% | Posting/first-seen recency |
+| Personal interest / compensation | 5% | Preferred role/company/industry signals and known compensation fit |
 | **Total** | **100%** | |
 
 Each component is normalized from 0 to 100. Before post-score penalties:
@@ -31,14 +31,14 @@ Weights, thresholds, freshness buckets, and penalties are versioned configuratio
 
 1. Confirm minimum source identity and an application/posting URL.
 2. Normalize/deduplicate.
-3. Apply explicit deterministic hard filters.
+3. Apply explicit deterministic hard filters, including visa `NO` and Hard-No location.
 4. Retrieve/read the description where safely available.
 5. Extract evidence-bearing structured signals.
 6. Compute the six components.
 7. Apply uncertainty/quality penalties.
 8. Exclude below-threshold or restricted records.
 9. Rank by final score, then freshness, then stable job ID for deterministic ties.
-10. Promote up to ten.
+10. Apply the location composition rule and promote up to ten.
 
 ## Hard filters
 
@@ -52,6 +52,7 @@ Hard filters require explicit evidence, retained with the matched text/field and
 - role is clearly unrelated to target EE/adjacent families;
 - posting is closed, expired, invalid, or has no actionable source after retry/review;
 - degree/discipline requirement is clearly incompatible and cannot reasonably be satisfied by the profile.
+- normalized location is classified as Hard-No under the approved profile.
 
 Do not transform uncertain language into a hard filter. Flag it and lower confidence. Export-control “U.S. person” wording must be evaluated separately from a blanket citizenship requirement; ambiguity is held for review.
 
@@ -89,7 +90,7 @@ Years are interpreted as one signal, not a strict universal gate. Relevant inter
 
 ## Component scoring
 
-### Technical / experience fit (38%)
+### Technical / experience fit (35%)
 
 Score only against approved profile and Experience Bank evidence. Suggested inputs:
 
@@ -106,25 +107,38 @@ The Notion UI needs only a concise fit summary and important gaps/flags, not a v
 
 ### Visa compatibility (20%)
 
-Visa evaluation uses evidence states rather than a binary prediction:
+The main user-facing visa value is exactly `YES`, `MAYBE`, or `NO`:
 
-| State | Score guidance | Handling |
+| Status | Default component score | Meaning and handling |
 | --- | ---: | --- |
-| Explicit compatible sponsorship/work-authorization evidence | 90–100 | Retain source and date |
-| No restriction found in full description | 55–70 | Not proof of sponsorship; label accurately |
-| Description missing or material language ambiguous | 30–50 | Flag for review |
-| Conflicting evidence | 10–40 | Major flag/penalty; user review |
-| Explicit incompatible restriction | 0 | Hard reject from promotion |
+| `YES` | 100 | Positive evidence suggests compatibility with F-1/OPT or future sponsorship needs; retain source/date internally |
+| `MAYBE` | 50 | No explicit incompatible restriction, but compatibility is unclear, unstated, missing, or based on conflicting/insufficient evidence |
+| `NO` | 0 | Explicit incompatible evidence; discard before ranking |
 
 Potential evidence includes stated sponsorship policy, current/future sponsorship questions, OPT/STEM OPT compatibility, employer E-Verify evidence, historical H-1B sponsorship, citizenship/U.S.-person wording, and clearance requirements. For V1, only posting text is required; employer E-Verify and historical H-1B enrichment are later improvements unless a reliable free source is quickly available.
 
-No restriction found must never be displayed as “visa friendly.” Historical sponsorship is supportive, not a guarantee. E-Verify evidence matters for STEM OPT but does not establish willingness to sponsor H-1B. Legal or policy ambiguity is surfaced for human verification.
+Evidence precedence is deterministic: an explicit incompatible restriction in the current official posting produces `NO` even when employer history is positive. Explicit current compatibility evidence produces `YES`. A documented positive Zapply/employer-history signal may support `YES` when it genuinely suggests compatibility and no stronger contradictory posting evidence exists, but the source and meaning must be retained.
 
-### New-grad / seniority fit (17%)
+No restriction found, a blank feed visa field, or missing sponsorship language is `MAYBE`, not `YES`. Historical sponsorship is supportive, not a guarantee. E-Verify evidence matters for STEM OPT but does not establish willingness to sponsor H-1B. Legal or policy ambiguity remains `MAYBE` for human verification. Supporting evidence and confidence may be stored internally without adding more user-facing states.
+
+### New-grad / seniority fit (15%)
 
 Combine title level, graduation-window eligibility, years wording, scope/ownership, and whether the role accepts a bachelor's degree. Use the experience spectrum above. Penalize roles expecting independent program ownership, people management, or deep post-degree practice even if title is vague.
 
-### Freshness (12%)
+### Location (15%)
+
+Each normalized location is mapped through the approved profile:
+
+| Tier | Score | Selection handling |
+| --- | ---: | --- |
+| Preferred | 100 | Highest location priority |
+| Acceptable | 75 | Fully eligible for normal selection |
+| Low-Interest | 20 | Eligible only as the single exceptional `Location Wildcard` |
+| Hard-No | 0 | Discard before ranking |
+
+Remote, hybrid, multi-location, and unknown locations require explicit profile rules. Unknown must not be silently treated as Preferred; default it conservatively to Low-Interest or hold it for review according to configuration.
+
+### Freshness (10%)
 
 Use publisher `Posted At` when credible; otherwise use `First Seen At` and set a lower-confidence flag. Suggested calendar-age buckets:
 
@@ -139,13 +153,22 @@ Use publisher `Posted At` when credible; otherwise use `First Seen At` and set a
 
 Jobs confirmed closed score zero and are filtered. A repost with a new requisition/posting date may be new; a tracking-parameter change is not. Never infer a fresh posting date from a feed update alone without labeling the timestamp source.
 
-### Personal interest (8%)
+### Personal interest / compensation (5%)
 
-Map role family and industry to profile weights. Unknown is neutral. The user may set an interest override, but it cannot defeat a hard restriction.
+Map role family, employer/industry interest, and known compensation to profile preferences. Missing compensation is neutral, not negative. The user may set an interest override, but it cannot defeat visa `NO`, Hard-No location, or another hard restriction.
 
-### Location / compensation (5%)
+## Daily Top 10 location composition
 
-Score geographic feasibility, work mode, relocation preference, and known compensation. Missing compensation is neutral, not negative. A hard geographic constraint may be configured separately from this preference score.
+Numeric score determines quality ordering, but location constraints determine final composition:
+
+1. Remove every hard-filtered, visa `NO`, Hard-No-location, stale/closed, and below-threshold candidate.
+2. Partition the remaining candidates into Preferred/Acceptable and Low-Interest pools.
+3. Select the highest-ranked Preferred/Acceptable candidates first. When at least nine viable candidates exist in this pool, reserve at least nine of ten slots for them.
+4. Consider at most one Low-Interest candidate as the `Location Wildcard`.
+5. Add that wildcard only when it clears a higher configurable wildcard threshold and has documented exceptional evidence such as outstanding technical fit, `YES` visa status, exceptional freshness, or unusually strong role/company interest.
+6. If no Low-Interest candidate qualifies, fill from Preferred/Acceptable candidates. If fewer than nine Preferred/Acceptable candidates exist, the queue may contain fewer than ten because there is still at most one wildcard.
+
+Initial calibration should set the wildcard threshold materially above the normal promotion threshold (for example, 80 versus 65) and require at least one strong component signal. Exact thresholds remain configurable and versioned. A Low-Interest candidate cannot displace more than one Preferred/Acceptable candidate, regardless of raw score.
 
 ## Penalties and promotion threshold
 
@@ -154,7 +177,7 @@ Initial configurable post-score penalties:
 - missing or inaccessible full description: 8–15 points and a review flag;
 - unresolved possible duplicate: 5 points and a review flag;
 - Engineer II / ambiguous higher level: 5–15 points depending on responsibilities;
-- conflicting visa evidence: 15–30 points or manual hold;
+- conflicting or insufficient visa evidence: classify as `MAYBE`; do not invent a finer user-facing status;
 - posting older than 30 days: normally excluded from Daily Top 10;
 - material required-skill gap: reflected primarily in technical score, with an optional capped penalty for a truly mandatory gap.
 
@@ -168,7 +191,7 @@ Start with a promotion threshold around 65/100 and calibrate on a labeled set of
 | Required vs preferred requirement extraction | Preserve quoted evidence location/hash |
 | Ambiguous seniority/context interpretation | Explicit title hard-filter rules and final policy |
 | Experience-to-requirement comparison | Approved Experience IDs/fact IDs only |
-| Visa-language classification | Explicit restriction rules; `unknown` required |
+| Visa-language evidence extraction | Deterministic mapping to `YES`, `MAYBE`, or `NO`; `NO` is discarded |
 | Concise fit summary | Component arithmetic and final score |
 | Bullet selection/rewrite proposals | Claim validation and formatting constraints |
 
@@ -184,6 +207,7 @@ For every scored job retain:
 - hard-filter/penalty rule IDs;
 - weights/configuration version;
 - model and prompt/schema version when AI was used;
-- final score, rank, and batch date.
+- final score, rank, and batch date;
+- location tier, wildcard eligibility/reason, and final composition decision.
 
 After several weeks, compare recommendations with user save/apply decisions. Adjust weights only with versioned changes and a small labeled evaluation set. Optimize for useful review/application decisions, not agreement with an opaque model score.

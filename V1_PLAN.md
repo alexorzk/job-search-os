@@ -2,7 +2,7 @@
 
 ## Definition of V1
 
-The one-week V1 is a thin, end-to-end workflow that produces a useful Daily Top 10 from one GitHub feed plus selected Gmail alerts, writes promoted jobs to Notion, and creates a reviewable one-page resume draft from a private Experience Bank for a selected job. The user applies and updates status manually.
+The one-week V1 is a thin, end-to-end workflow that produces a useful Daily Top 10 from [Zapply — New-Grad Hardware Engineering Jobs 2027](https://github.com/zapplyjobs/New-Grad-Hardware-Engineering-Jobs-2027) plus selected Gmail alerts, writes promoted jobs to Notion, and creates a reviewable one-page resume draft from a private Experience Bank for a selected job. The user applies and updates status manually.
 
 One week is realistic only if setup is available on day one, the initial GitHub feed has a stable parseable format, Gmail alert formats are limited to a few representative examples, and resume output targets one controlled template. Networking, Hunter.io, browser extension work, and automated confirmation reconciliation are stretch scope.
 
@@ -14,6 +14,9 @@ One week is realistic only if setup is available on day one, the initial GitHub 
 - Store promoted jobs in Notion; keep rejected/raw processing results out of the main database unless needed for debugging.
 - Treat the Daily Top 10 as “up to 10”: never pad the queue with poor or disqualified roles.
 - A user-visible uncertainty flag is better than an unsupported answer.
+- Visa `NO` and Hard-No locations are pre-ranking discards. Missing visa evidence is normally `MAYBE`, not `YES`.
+- Reserve the Top 10 for Preferred/Acceptable locations except for at most one unusually strong Low-Interest location wildcard.
+- Do not integrate the broader generic Zapply new-grad repository unless the dedicated hardware/EE feed proves insufficient.
 
 ## Milestone order and acceptance criteria
 
@@ -46,19 +49,21 @@ Capture private targeting preferences, work authorization facts, locations, disc
 Acceptance:
 
 - required profile fields are complete or explicitly `unknown`;
+- every target location is classified as Preferred, Acceptable, Low-Interest, or Hard-No, including an explicit policy for remote/multi-location roles;
 - at least enough approved Experience Bank entries exist to evaluate representative jobs and assemble a baseline resume;
 - each fact/bullet has a stable ID and is marked approved before AI may use it;
 - no real profile or Experience Bank export is committed.
 
 ### 3. GitHub job-feed ingestion
 
-Implement one adapter for the selected dedicated 2027 new-grad hardware/EE jobs repository.
+Implement one adapter for [Zapply — New-Grad Hardware Engineering Jobs 2027](https://github.com/zapplyjobs/New-Grad-Hardware-Engineering-Jobs-2027). Do not integrate the broader generic Zapply new-grad repository in the core V1.
 
 Acceptance:
 
 - a scheduled or manual run fetches and normalizes new entries;
 - rerunning the same input is idempotent;
 - source URL and observed/published timestamps are retained;
+- official company application links are preserved as the preferred verification/source-of-truth when present;
 - source format drift produces a visible error rather than silent empty results;
 - fixtures cover normal, changed, duplicate, and malformed rows.
 
@@ -81,7 +86,7 @@ Retrieve full descriptions from source-provided or canonical job URLs when acces
 Acceptance:
 
 - duplicate jobs across GitHub and Gmail resolve to one candidate with source provenance;
-- obvious senior titles and explicit hard visa/clearance restrictions are rejected or held according to policy;
+- obvious senior titles, visa `NO`, and Hard-No locations are rejected before ranking;
 - Engineer II and ambiguous experience requirements are read, not automatically rejected;
 - missing/inaccessible descriptions are flagged and scored conservatively;
 - retrieval honors normal access controls and does not scrape LinkedIn.
@@ -95,18 +100,24 @@ Acceptance:
 - fixed fixtures produce repeatable scores and hard-filter outcomes;
 - scoring weights and thresholds are configurable and sum to 100%;
 - AI output is schema-validated and cannot override hard restrictions;
-- uncertain visa, seniority, and evidence cases remain `unknown`/reviewable;
+- the user-facing visa result is exactly `YES`, `MAYBE`, or `NO`; absence of language maps to `MAYBE` unless stronger evidence exists;
+- technical, visa, new-grad, location, freshness, and combined interest/compensation weights default to 35/20/15/15/10/5;
+- uncertain seniority and evidence cases remain explicitly reviewable;
 - score records retain model/rules version and input snapshot identifiers.
 
 ### 7. Daily Top 10
 
-Select up to ten best viable fresh candidates per local calendar day, with diversity/tie behavior kept simple and deterministic.
+Select up to ten best viable fresh candidates per local calendar day using deterministic location composition after numeric ranking.
 
 Acceptance:
 
 - each run promotes no more than ten viable jobs;
 - reruns update the same daily batch instead of duplicating it;
 - explicitly disqualified roles cannot enter the queue;
+- visa `NO` and Hard-No-location jobs never enter the queue;
+- at least nine jobs are from Preferred/Acceptable locations whenever at least nine viable jobs from those tiers exist;
+- no more than one Low-Interest `Location Wildcard` appears, and only when it clears a higher configurable exceptional-opportunity threshold;
+- a Low-Interest job cannot displace multiple viable Preferred/Acceptable jobs;
 - each promoted item has rank, composite score, concise fit summary, and uncertainty flags;
 - an insufficient pool results in fewer than ten items.
 
@@ -116,7 +127,7 @@ Upsert promoted items into the Jobs database and configure useful private views.
 
 Acceptance:
 
-- a “Today — Review” view shows rank, title, company, location, freshness, score, visa signal, flags, and source link;
+- a “Today — Review” view shows rank, title, company, location tier, freshness, score, `YES`/`MAYBE`/`NO` visa status, wildcard marker, flags, and source link;
 - lifecycle views support ready-to-apply and active applications;
 - raw low-value listings do not flood the dashboard;
 - manual edits to user-owned fields are preserved during upsert.
@@ -192,10 +203,10 @@ Acceptance:
 | Day | Primary outcome | Scope guardrail |
 | --- | --- | --- |
 | 1 | Notion schemas, private configuration, profile, fake end-to-end upsert | No UI and no extra databases |
-| 2 | One GitHub feed adapter, normalization, deduplication, tests | Do not add more feeds |
+| 2 | Dedicated Zapply hardware/EE feed adapter, normalization, deduplication, tests | Do not add the generic Zapply feed |
 | 3 | Narrow Gmail alerts plus description retrieval and hard filters | Support only observed alert formats |
-| 4 | Experience-aware features, visa signals, configurable scoring | AI cannot override deterministic restrictions |
-| 5 | Daily Top 10 and Notion dashboard/views | Up to 10; never pad |
+| 4 | Experience-aware features, `YES`/`MAYBE`/`NO` visa classification, configurable scoring | AI cannot override deterministic restrictions |
+| 5 | Location-constrained Daily Top 10 and Notion dashboard/views | Up to 10; at most one Low-Interest wildcard |
 | 6 | Experience Bank tailoring flow and traceability | One resume template only |
 | 7 | Deterministic render/QA, exact version linking, end-to-end rehearsal, documentation | Cut stretch work before core QA |
 
@@ -226,7 +237,7 @@ Do not cut duplicate safety, explicit restriction handling, Experience Bank trac
 
 - A scheduled run handles at least one GitHub source and configured alert emails.
 - The run is idempotent, logged, and survives individual malformed items.
-- Up to ten viable jobs appear in the private Notion daily queue with useful flags.
+- Up to ten viable jobs appear in the private Notion daily queue with simple visa status and location composition enforced.
 - The user can move a job through review to applied manually.
 - One selected job can produce a truthful, traceable, one-page resume draft.
 - Formatting QA identifies overflow and long bullets.

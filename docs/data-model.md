@@ -6,7 +6,7 @@
 - Put only promoted jobs in the primary Jobs database.
 - Use stable internal IDs, relations, and snapshots so an application remains auditable after a posting changes.
 - Distinguish automation-owned fields from user-owned decisions.
-- Represent `unknown` explicitly; blank must not imply compatible or false.
+- Represent source uncertainty explicitly; for visa, internal unknown evidence maps to user-facing `MAYBE`, and blank never implies `YES`.
 - Real records are private. Public fixtures use invented employers, people, and facts.
 
 ## Job (Notion database)
@@ -19,10 +19,12 @@ One record represents a promoted opportunity and its application lifecycle. A se
 | `Title` | title | automation | Display title |
 | `Company` | text | automation | Normalized employer |
 | `Canonical URL` | URL | automation | Preferred application/posting URL |
+| `Official Application URL` | URL | automation | Company career-page URL used as verification/source-of-truth when available |
 | `Source Links` | text/URLs | automation | All provenance links; compact JSON/text is acceptable in V1 |
 | `Source Types` | multi-select | automation | GitHub, Gmail, Manual |
 | `Location` | text | automation | Normalized display location |
 | `Work Mode` | select | automation | On-site, Hybrid, Remote, Unknown |
+| `Location Tier` | select | automation | Preferred, Acceptable, Low-Interest, Hard-No |
 | `Posted At` | date | automation | Publisher date when known |
 | `First Seen At` | date/time | automation | First ingestion time |
 | `Last Seen At` | date/time | automation | Latest source observation |
@@ -31,7 +33,8 @@ One record represents a promoted opportunity and its application lifecycle. A se
 | `Role Family` | multi-select | automation | Electrical, Hardware, Embedded, Firmware, Test, etc. |
 | `Experience Requirement` | text | automation | Extracted range/phrase plus evidence |
 | `Seniority Signal` | select | automation | New Grad, Entry, Junior, Engineer I, Engineer II, Senior+, Unknown |
-| `Visa Signal` | select | automation | Compatible Evidence, No Restriction Found, Uncertain, Restricted |
+| `Visa Status` | select | automation | User-facing value: YES, MAYBE, or NO |
+| `Visa Evidence` | private structured text/link | automation | Supporting text/source/date/confidence retained internally where available |
 | `Restriction Flags` | multi-select | automation | Citizenship, PR, No Sponsorship, Clearance, Export Control, Seniority |
 | `Score` | number | automation | Final score after penalties, 0–100 |
 | `Score Version` | text | automation | Rules/weights/model traceability |
@@ -39,6 +42,7 @@ One record represents a promoted opportunity and its application lifecycle. A se
 | `Review Flags` | multi-select | automation | Missing description, visa review, duplicate review, stale, etc. |
 | `Daily Batch` | date/text | automation | Local date key for promotion |
 | `Daily Rank` | number | automation | 1–10 within batch |
+| `Location Wildcard` | checkbox | automation | True only for the one permitted exceptional Low-Interest promotion |
 | `Stage` | select | user | Review, Saved, Resume Needed, Resume Draft, Ready to Apply, Applied, Networking, Interviewing, Offer, Rejected, Closed, Skipped |
 | `Interest Override` | select/number | user | Optional preference adjustment for future rescoring |
 | `User Notes` | rich text | user | Decision and follow-up notes |
@@ -65,7 +69,7 @@ V1 has one user, so this does not require a Notion database. Store it as a priva
 | `Sponsorship Needed Future` | yes/no/unknown | Long-term compatibility evaluation |
 | `Target Role Families` | weighted list | Broad EE/adjacent disciplines and preference |
 | `Excluded Role Families` | list | Clearly unwanted work |
-| `Target Locations` | weighted list | Preferred/acceptable locations and remote policy |
+| `Target Locations` | categorized list | Locations classified as Preferred, Acceptable, Low-Interest, or Hard-No, plus remote/multi-location policy |
 | `Relocation` | yes/no/conditional | Location feasibility |
 | `Compensation Constraints` | optional range | Hard minimum or preference when available |
 | `Industry Interests` | weighted list | Personal-interest score input |
@@ -74,6 +78,14 @@ V1 has one user, so this does not require a Notion database. Store it as a priva
 | `Hard Constraints` | list | User-defined non-negotiables |
 
 Unknown authorization facts must trigger user review. The system is an organizational aid, not legal advice.
+
+The main visa field has exactly three values:
+
+- `YES`: positive evidence suggests compatibility with the user's F-1/OPT situation or future sponsorship needs;
+- `MAYBE`: no explicit incompatible restriction was found, but compatibility is unclear or unstated;
+- `NO`: explicit evidence clearly excludes the user.
+
+Missing visa data or silence is normally `MAYBE`, never `YES`. `NO` is discarded before Daily Top 10 ranking. Evidence details remain internal rather than expanding the main UI vocabulary.
 
 ## Experience Bank (Notion database)
 
@@ -148,6 +160,7 @@ Raw candidates and run logs should not become Notion dashboard databases. The mi
 - normalized candidate payload and stable ID;
 - filter outcome with rule IDs/evidence;
 - feature vector, score, rules/config/model versions;
+- location tier, wildcard eligibility/reason, and visa evidence supporting the three-state result;
 - publish status and Notion page ID.
 
 Apps Script Properties/cache may suffice at tiny volume. Use a private Google Sheet only if durable checkpoints, quotas, or debugging require it.
@@ -157,6 +170,7 @@ Apps Script Properties/cache may suffice at tiny volume. Use a private Google Sh
 - A job cannot be `Ready to Apply` without an approved related Resume Version when a resume is required.
 - A job cannot be marked `Applied` by automation.
 - `Selected Resume` must reference an approved/used immutable file.
-- A hard-restricted job cannot enter the Daily Top 10 unless a user explicitly overrides it with a recorded reason; V1 may omit override support.
+- A visa `NO` or Hard-No-location job cannot enter the Daily Top 10.
+- A Daily Top 10 contains at most one Low-Interest job, marked `Location Wildcard`; when at least nine viable Preferred/Acceptable jobs exist, at least nine selected jobs come from those tiers.
 - Score changes never reset a user-owned stage.
 - Deleting or retiring Experience Bank content does not alter historical Resume Version manifests.

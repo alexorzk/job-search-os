@@ -7,7 +7,7 @@ V1 is a small scheduled pipeline, not a general job-search platform. Google Apps
 ## End-to-end data flow
 
 ```text
-GitHub 2027 hardware/EE feed ─┐
+Zapply 2027 hardware/EE feed ─┐
                               ├─> ingest + source checkpoints
 Labeled Gmail job alerts ─────┘
                                       │
@@ -18,7 +18,10 @@ Labeled Gmail job alerts ─────┘
                          deduplicate + merge provenance
                                       │
                                       v
-                   deterministic relevance/hard restrictions
+             official-page verification when link is available
+                                      │
+                                      v
+           deterministic relevance/visa/location hard restrictions
                                       │
                                       v
                      retrieve/snapshot descriptions if allowed
@@ -30,7 +33,7 @@ Labeled Gmail job alerts ─────┘
                     deterministic weighted score + flags
                                       │
                                       v
-                       select up to Daily Top 10
+              select location-constrained Daily Top 10
                                       │
                                       v
                            private Notion Jobs queue
@@ -70,7 +73,7 @@ Apps Script is the V1 backend and scheduler. It owns:
 - description retrieval where safely accessible;
 - deterministic hard filters and score calculation;
 - the replaceable AI adapter and output schema validation;
-- Daily Top 10 selection;
+- Daily Top 10 selection with Preferred/Acceptable reservation and a maximum of one Low-Interest wildcard;
 - Notion upserts that preserve user-owned fields;
 - Drive file creation/linking for resume versions;
 - structured run summaries and item-level errors.
@@ -98,7 +101,9 @@ Application-confirmation detection is stretch scope. If implemented, it creates 
 
 ### GitHub job feed
 
-One dedicated 2027 new-grad hardware/electrical jobs repository is the primary source. Its exact repository, file, schema, update behavior, and license must be verified before implementation. The adapter records the upstream URL and revision/observation time, detects format drift, and converts rows to the normalized Job candidate shape.
+[Zapply — New-Grad Hardware Engineering Jobs 2027](https://github.com/zapplyjobs/New-Grad-Hardware-Engineering-Jobs-2027) is the primary machine-friendly source. It is specifically scoped to entry-level/new-graduate hardware, electrical, embedded, and robotics roles. The adapter records the upstream URL and revision/observation time, detects format drift, and converts rows to the normalized Job candidate shape. The broader generic Zapply new-grad repository is excluded unless measured V1 coverage proves the dedicated feed insufficient.
+
+When a candidate provides an official company application/career-page link, that page is the preferred verification/source-of-truth for title, location, open/closed status, description, requirements, and explicit work-authorization language. The feed remains provenance and discovery input, not unquestioned truth.
 
 ### Google Drive
 
@@ -106,7 +111,7 @@ Drive stores exact approved resume files in a private folder. File names should 
 
 ### AI provider
 
-AI may extract ambiguous requirements, classify role families, compare job evidence with approved experiences, summarize fit, select content, and propose modest bullet rewrites. Every call uses structured output with enumerated `unknown` states.
+AI may extract ambiguous requirements, classify role families, compare job evidence with approved experiences, summarize fit, select content, and propose modest bullet rewrites. Every call uses structured output with enumerated internal `unknown` states; an unknown visa result maps to user-facing `MAYBE`.
 
 AI does not own:
 
@@ -131,10 +136,10 @@ Hunter.io is optional and user-triggered after an application is recorded. It ma
 1. **Ingest:** adapter emits a source item with source ID and observed timestamp.
 2. **Normalize:** convert company, title, URL, location, dates, and text to stable fields.
 3. **Deduplicate:** match exact canonical IDs first; use cautious normalized fallback keys second.
-4. **Prefilter:** reject clear non-EE/adjacent work, obvious seniority, and explicit incompatible restrictions.
+4. **Verify/prefilter:** prefer the official company page when available; reject clear non-EE/adjacent work, obvious seniority, visa `NO`, and Hard-No locations.
 5. **Enrich:** retrieve accessible description and extract structured signals.
 6. **Score:** apply configured feature weights and penalties; retain evidence and version metadata.
-7. **Select:** choose up to ten viable items for the local daily batch.
+7. **Select:** choose up to ten viable items for the local daily batch, preferring at least nine Preferred/Acceptable jobs when available, allowing at most one exceptional Low-Interest wildcard, and allowing no Hard-No jobs.
 8. **Publish:** upsert promotions to Notion and emit a run summary.
 9. **Tailor:** on user request, assemble a traceable proposal from approved evidence.
 10. **Render:** produce and validate a deterministic file, then save the approved version to Drive.

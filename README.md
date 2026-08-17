@@ -6,13 +6,13 @@ This public repository currently contains the **Milestone 0 planning foundation*
 
 ## V1 outcome
 
-Each morning, the system should ingest fresh jobs from a machine-friendly GitHub feed and legitimate Gmail alerts, remove duplicates and obvious mismatches, evaluate the remaining roles, and place approximately the ten best opportunities in a private Notion review queue. For a selected job, it should help assemble a truthful, job-specific resume from a structured Experience Bank while preserving deterministic formatting. The user reviews every job, resume, application, and outreach action.
+Each morning, the system should ingest fresh jobs from [Zapply — New-Grad Hardware Engineering Jobs 2027](https://github.com/zapplyjobs/New-Grad-Hardware-Engineering-Jobs-2027) and legitimate Gmail alerts, remove duplicates and obvious mismatches, evaluate the remaining roles, and place approximately the ten best opportunities in a private Notion review queue. Visa status stays user-facing as `YES`, `MAYBE`, or `NO`; location preferences materially shape both score and queue composition. For a selected job, the system should help assemble a truthful, job-specific resume from a structured Experience Bank while preserving deterministic formatting. The user reviews every job, resume, application, and outreach action.
 
 The initial user profile is a senior B.S. Electrical Engineering student graduating in May 2027 who is an F-1 international student. Title matching is intentionally broad: the system asks whether a new EE graduate could reasonably qualify, not whether the title literally says “entry level.”
 
 ## Deliberate V1 boundaries
 
-V1 uses Notion, Google Apps Script, Gmail, Google Drive, and public GitHub job feeds. AI assists with classification, comparison, and wording, but deterministic rules control safety-critical filters, score calculation, deduplication, and formatting checks.
+V1 uses Notion, Google Apps Script, Gmail, Google Drive, and the dedicated Zapply 2027 hardware/EE feed. The broader generic Zapply new-grad repository is excluded unless the dedicated feed proves insufficient. AI assists with classification, comparison, and wording, but deterministic rules control safety-critical filters, score calculation, deduplication, Top 10 composition, and formatting checks.
 
 V1 does not include LinkedIn scraping, automatic applications or messaging, a custom frontend, Docker, vector databases, complex multi-agent orchestration, paid workflow automation, or unnecessary cloud infrastructure.
 
